@@ -62,37 +62,85 @@ public class GraphUtils {
     }
 
     /**
-     * Verifica se o grafo é conexo.
+     * Verifica se o grafo é conexo considerando todos os vértices
+     * que TINHAM arestas antes da última remoção.
      *
-     * Estratégia: encontra o primeiro vértice com grau > 0 e faz DFS.
-     * Se o número de vértices alcançados for igual ao total de vértices
-     * com grau > 0, o grafo é conexo.
+     * Usada pelo Naïve: após remover (u,v), verifica se u ainda
+     * alcança v. Se não alcança, a aresta era ponte.
      *
-     * Vértices isolados (grau 0) são ignorados na verificação de conectividade
-     * para fins de existência de caminho euleriano.
+     * Estratégia eficiente: em vez de varrer todos os N vértices,
+     * faz DFS a partir de u e verifica apenas se v foi alcançado.
+     * Custo real = O(componente de u), muito menor que O(N) quando
+     * o grafo é esparso com muitos vértices isolados.
      */
     public static boolean isConnected(Graph g) {
         int n = g.getNumVertices();
+        if (n == 0) return true;
 
-        // Encontra um vértice com grau > 0 como ponto de partida
+        // Encontra primeiro vértice com grau > 0
         int start = -1;
         for (int v = 0; v < n; v++) {
-            if (g.degree(v) > 0) {
-                start = v;
-                break;
-            }
+            if (g.degree(v) > 0) { start = v; break; }
         }
 
-        // Grafo sem arestas é trivialmente conexo (ou vazio)
+        // Sem arestas: trivialmente conexo (nada a desconectar)
         if (start == -1) return true;
 
         Set<Integer> visited = dfs(g, start);
 
-        // Verifica se todos os vértices com grau > 0 foram alcançados
+        // Verifica apenas vértices que têm arestas —
+        // vértices originalmente isolados (grau 0 antes e depois) não contam
         for (int v = 0; v < n; v++) {
-            if (g.degree(v) > 0 && !visited.contains(v)) {
-                return false;
+            if (g.degree(v) > 0 && !visited.contains(v)) return false;
+        }
+        return true;
+    }
+
+    /**
+     * Verifica se a aresta (u,v) ainda conecta após remoção — versão
+     * otimizada para o Naïve.
+     *
+     * Em vez de varrer todos os vértices, faz DFS a partir de u e
+     * verifica apenas se v é alcançável. Muito mais rápido em grafos
+     * esparsos com muitos vértices isolados.
+     */
+    public static boolean isReachable(Graph g, int u, int v) {
+        Deque<Integer> stack = new ArrayDeque<>();
+        Set<Integer> visited = new HashSet<>();
+        stack.push(u);
+        while (!stack.isEmpty()) {
+            int cur = stack.pop();
+            if (cur == v) return true;
+            if (visited.contains(cur)) continue;
+            visited.add(cur);
+            for (int nb : g.getNeighbors(cur)) {
+                if (!visited.contains(nb)) stack.push(nb);
             }
+        }
+        return false;
+    }
+
+    /**
+     * Verifica conectividade ignorando vértices isolados (grau 0).
+     *
+     * Usada pela classificação euleriana: vértices sem arestas não
+     * interferem na existência de circuito/caminho euleriano.
+     */
+    public static boolean isConnectedIgnoringIsolated(Graph g) {
+        int n = g.getNumVertices();
+
+        int start = -1;
+        for (int v = 0; v < n; v++) {
+            if (g.degree(v) > 0) { start = v; break; }
+        }
+
+        // Grafo sem arestas: trivialmente conexo
+        if (start == -1) return true;
+
+        Set<Integer> visited = dfs(g, start);
+
+        for (int v = 0; v < n; v++) {
+            if (g.degree(v) > 0 && !visited.contains(v)) return false;
         }
         return true;
     }
@@ -108,7 +156,7 @@ public class GraphUtils {
      * - Caminho euleriano ↔ grafo conexo e exatamente 2 vértices de grau ímpar
      */
     public static EulerianType classifyGraph(Graph g) {
-        if (!isConnected(g)) return EulerianType.NON_EULERIAN;
+        if (!isConnectedIgnoringIsolated(g)) return EulerianType.NON_EULERIAN;
 
         List<Integer> oddVertices = g.getOddDegreeVertices();
         int oddCount = oddVertices.size();

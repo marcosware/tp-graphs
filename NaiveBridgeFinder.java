@@ -55,13 +55,16 @@ public class NaiveBridgeFinder implements BridgeFinder {
             // Passo 1: remove a aresta temporariamente
             g.removeEdge(u, v);
 
-            // Passo 2: verifica conectividade
-            boolean connected = checkConnectivity(g);
+            // Passo 2: verifica se u ainda alcança v.
+            // Usar isReachable(u,v) é muito mais eficiente que isConnected()
+            // em grafos esparsos com muitos vértices isolados: a DFS para
+            // assim que encontra v, sem varrer o grafo inteiro.
+            boolean connected = GraphUtils.isReachable(g, u, v);
 
             // Passo 3: reinsere a aresta (estado original restaurado)
             g.addEdge(u, v);
 
-            // Passo 4: se ficou desconexo, é ponte
+            // Passo 4: se v não é mais alcançável a partir de u, é ponte
             if (!connected) {
                 bridges.add(new int[]{u, v});
             }
@@ -107,9 +110,9 @@ public class NaiveBridgeFinder implements BridgeFinder {
     @Override
     public boolean isBridge(Graph g, int u, int v) {
         g.removeEdge(u, v);
-        boolean connected = checkConnectivity(g);
+        boolean reachable = GraphUtils.isReachable(g, u, v);
         g.addEdge(u, v);
-        return !connected;
+        return !reachable;
     }
 
     @Override

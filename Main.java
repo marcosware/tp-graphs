@@ -63,6 +63,7 @@ public class Main {
      * Retorna false se o usuário escolher sair.
      */
     static boolean selecionarTamanho() {
+        // --- Passo 1: número de vértices ---
         System.out.println("╔══════════════════════════════════════╗");
         System.out.println("║   Selecione o numero de vertices     ║");
         System.out.println("╠══════════════════════════════════════╣");
@@ -88,18 +89,125 @@ public class Main {
 
         if (N == 0) return false;
 
-        System.out.println("Gerando grafo conexo com " + N + " vertices...");
+        // --- Passo 2: densidade ---
+        // Densidade d é a fração de arestas presentes sobre o máximo possível.
+        // Máximo de arestas num grafo simples = N*(N-1)/2
+        // Número de arestas = max(N-1, round(d * N*(N-1)/2))
+        // O mínimo é sempre N-1 para garantir conectividade (spanning tree).
+        System.out.println("╔══════════════════════════════════════╗");
+        System.out.println("║   Selecione a densidade do grafo     ║");
+        System.out.println("╠══════════════════════════════════════╣");
+        System.out.println("║  1. Pre-definida (menu)              ║");
+        System.out.println("║  2. Manual (digitar valor 0.0 a 1.0) ║");
+        System.out.println("╚══════════════════════════════════════╝");
+        System.out.print("Opcao: ");
+        int modoDens = lerInt();
+        System.out.println();
+
+        double densidade;
+
+        if (modoDens == 2) {
+            densidade = lerDensidadeManual(N);
+        } else {
+            densidade = selecionarDensidadeMenu(N);
+        }
+
+        // Calcula número de arestas a partir da densidade
+        // Usa long para evitar overflow em N=100k (N*(N-1)/2 ~ 5 bilhões)
+        long maxArestas = (long) N * (N - 1) / 2;
+        int totalArestas = (int) Math.max(N - 1, Math.round(densidade * maxArestas));
+
+        // Estima viabilidade do Naïve: E*(V+E) operações
+        long estimativaOps = (long) totalArestas * (N + totalArestas);
+        double estimativaSeg = estimativaOps / 200_000_000.0; // ~200M ops/s em Java
+
+        System.out.printf("Densidade: %.6f | Arestas: %d%n", densidade, totalArestas);
+        System.out.printf("Estimativa Naive: %.1f seg (~%.1f min)%n",
+            estimativaSeg, estimativaSeg / 60.0);
+
+        if (estimativaSeg > 60) {
+            System.out.println("AVISO: Naive pode ser muito lento com esses parametros.");
+            System.out.println("       Considere usar densidade menor ou testar so o Tarjan.");
+            System.out.print("Deseja continuar mesmo assim? (s/n): ");
+            String resp = scanner.next().trim().toLowerCase();
+            System.out.println();
+            if (!resp.equals("s")) {
+                System.out.println("Operacao cancelada. Escolha outra densidade.\n");
+                return selecionarTamanho(); // volta ao inicio da selecao
+            }
+        }
+        System.out.println();
+
+        System.out.printf("Gerando grafo conexo com %d vertices e %d arestas...%n",
+            N, totalArestas);
+
         GraphGenerator gen = new GraphGenerator();
-        int extra = Math.max(2, N / 5);
-        grafoAtual = gen.generateConnectedRandom(N, N + extra);
-        System.out.println("Grafo gerado: " + N + " vertices, " + grafoAtual.getNumEdges() + " arestas.\n");
+        grafoAtual = gen.generateConnectedRandom(N, totalArestas);
+
+        System.out.printf("Grafo gerado: %d vertices, %d arestas.%n%n",
+            N, grafoAtual.getNumEdges());
 
         return true;
+    }
+
+    /**
+     * Menu de densidades pré-definidas com estimativa de arestas para o N atual.
+     */
+    static double selecionarDensidadeMenu(int n) {
+        // Calcula arestas para cada opção para exibir ao usuário
+        long max = (long) n * (n - 1) / 2;
+        long e1 = Math.max(n - 1, Math.round(0.000010 * max));
+        long e2 = Math.max(n - 1, Math.round(0.000100 * max));
+        long e3 = Math.max(n - 1, Math.round(0.001000 * max));
+        long e4 = Math.max(n - 1, Math.round(0.010000 * max));
+
+        System.out.println("╔════════════════════════════════════════════╗");
+        System.out.println("║   Densidades pre-definidas                 ║");
+        System.out.println("╠════════════════════════════════════════════╣");
+        System.out.printf ("║  1. 0.000010  (~%10d arestas)         ║%n", e1);
+        System.out.printf ("║  2. 0.000100  (~%10d arestas)         ║%n", e2);
+        System.out.printf ("║  3. 0.001000  (~%10d arestas)         ║%n", e3);
+        System.out.printf ("║  4. 0.010000  (~%10d arestas)         ║%n", e4);
+        System.out.println("╚════════════════════════════════════════════╝");
+        System.out.print("Opcao: ");
+
+        int opcao = lerInt();
+        System.out.println();
+
+        return switch (opcao) {
+            case 1  -> 0.000010;
+            case 2  -> 0.000100;
+            case 3  -> 0.001000;
+            case 4  -> 0.010000;
+            default -> { System.out.println("Opcao invalida. Usando 0.000010."); yield 0.000010; }
+        };
+    }
+
+    /**
+     * Lê densidade manual do usuário com validação e mostra estimativa de arestas.
+     */
+    static double lerDensidadeManual(int n) {
+        double d = -1;
+        while (d < 0 || d > 1) {
+            System.out.print("Digite a densidade (ex: 0.000010, entre 0.0 e 1.0): ");
+            try {
+                d = Double.parseDouble(scanner.next().trim().replace(",", "."));
+                if (d < 0 || d > 1) {
+                    System.out.println("Valor fora do intervalo [0.0, 1.0]. Tente novamente.");
+                    d = -1;
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Formato invalido. Use ponto como separador decimal.");
+            }
+        }
+        System.out.println();
+        return d;
     }
 
     static void exibirMenuFuncionalidades() {
         System.out.println("╔══════════════════════════════════════╗");
         System.out.printf ("║  Grafo atual: %6d vertices        ║%n", N);
+        System.out.printf ("║  Arestas:     %6d                 ║%n", grafoAtual.getNumEdges());
         System.out.println("╠══════════════════════════════════════╣");
         System.out.println("║  1. Estrutura do grafo               ║");
         System.out.println("║  2. DFS e BFS                        ║");
