@@ -174,4 +174,29 @@ public class GraphUtils {
         SEMI_EULERIAN,  // caminho euleriano (sem circuito)
         NON_EULERIAN    // nem caminho nem circuito
     }
+
+    /**
+     * Cópia profunda do grafo. Útil quando o algoritmo é destrutivo
+     * (Naïve.findBridges, Fleury) e queremos preservar o original.
+     */
+    public static Graph copyGraph(Graph g) {
+        Graph c = new Graph(g.getNumVertices());
+        int n = g.getNumVertices();
+        for (int u = 0; u < n; u++) {
+            for (int v : g.getNeighbors(u)) {
+                if (u < v) c.addEdge(u, v); // evita duplicar (u,v) e (v,u)
+            }
+        }
+        return c;
+    }
+
+    /**
+     * Chave canônica de uma aresta não-direcionada empacotada em long
+     * (32 bits para min, 32 para max). Substitui concatenação de string.
+     */
+    public static long edgeKey(int u, int v) {
+        int a = Math.min(u, v);
+        int b = Math.max(u, v);
+        return ((long) a << 32) | (b & 0xFFFFFFFFL);
+    }
 }

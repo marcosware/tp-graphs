@@ -40,6 +40,12 @@ public class TarjanBridgeFinder implements BridgeFinder {
 
     private int time;
 
+    // Cache para acelerar isBridge() quando chamado múltiplas vezes
+    // sobre o mesmo grafo (ex.: Fleury). Invalidado pela versão do grafo.
+    private Graph    cacheGraph   = null;
+    private long     cacheVersion = -1;
+    private Set<Long> cacheBridgeKeys = null;
+
     @Override
     public List<int[]> findBridges(Graph g) {
 
@@ -110,16 +116,23 @@ public class TarjanBridgeFinder implements BridgeFinder {
 
     /**
      * Verificação de ponte individual.
-     * Para simplificar (e manter corretude), reutiliza findBridges.
+     *
+     * Otimização: usa cache invalidado pela versão do grafo. Em algoritmos
+     * que chamam isBridge várias vezes entre modificações (ex.: Fleury
+     * iterando vizinhos do vértice atual), só recomputa findBridges quando
+     * o grafo muda — reduz Fleury+Tarjan de O(deg·E·(V+E)) para O(E·(V+E)).
      */
     @Override
     public boolean isBridge(Graph g, int u, int v) {
-        for (int[] e : findBridges(g)) {
-            if ((e[0] == u && e[1] == v) || (e[0] == v && e[1] == u)) {
-                return true;
+        if (g != cacheGraph || g.getVersion() != cacheVersion) {
+            cacheGraph = g;
+            cacheVersion = g.getVersion();
+            cacheBridgeKeys = new HashSet<>();
+            for (int[] e : findBridges(g)) {
+                cacheBridgeKeys.add(GraphUtils.edgeKey(e[0], e[1]));
             }
         }
-        return false;
+        return cacheBridgeKeys.contains(GraphUtils.edgeKey(u, v));
     }
 
     @Override

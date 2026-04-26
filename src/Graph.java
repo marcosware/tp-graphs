@@ -14,7 +14,14 @@ public class Graph {
     // Cada posição guarda a lista de vizinhos do vértice i
     private final LinkedList<Integer>[] adjList;
 
-    @SuppressWarnings("unchecked")
+    // Contador de versão: incrementado a cada modificação estrutural.
+    // Permite caches externos (ex.: Tarjan.isBridge) invalidarem com
+    // segurança usando comparação de inteiros — O(1).
+    private long version = 0;
+
+    // Mantido em O(1) por add/removeEdge — evita varredura de getAllEdges().
+    private int numEdges = 0;
+
     public Graph(int numVertices) {
         this.numVertices = numVertices;
         adjList = new LinkedList[numVertices];
@@ -32,6 +39,8 @@ public class Graph {
         if (!adjList[u].contains(v)) {
             adjList[u].add(v);
             adjList[v].add(u);
+            version++;
+            numEdges++;
         }
     }
 
@@ -40,9 +49,19 @@ public class Graph {
      * Usado pelo método naïve: remove → testa → reinsere.
      */
     public void removeEdge(int u, int v) {
-        adjList[u].remove(Integer.valueOf(v));
+        boolean changed = adjList[u].remove(Integer.valueOf(v));
         adjList[v].remove(Integer.valueOf(u));
+        if (changed) {
+            version++;
+            numEdges--;
+        }
     }
+
+    /**
+     * Versão atual do grafo: muda a cada add/remove de aresta.
+     * Usado para invalidar caches em algoritmos externos.
+     */
+    public long getVersion() { return version; }
 
     /**
      * Verifica se a aresta (u, v) existe.
@@ -86,10 +105,10 @@ public class Graph {
     }
 
     /**
-     * Retorna o número de arestas do grafo.
+     * Retorna o número de arestas do grafo (O(1)).
      */
     public int getNumEdges() {
-        return getAllEdges().size();
+        return numEdges;
     }
 
     /**

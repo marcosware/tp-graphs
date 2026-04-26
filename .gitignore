@@ -1,0 +1,19 @@
+# Build artifacts
+*.class
+src/*.class
+
+# LaTeX intermediate files
+relatorio/*.aux
+relatorio/*.log
+relatorio/*.out
+relatorio/*.toc
+relatorio/*.synctex.gz
+
+# IDE / editor
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
