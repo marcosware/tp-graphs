@@ -33,15 +33,16 @@ public class Main {
                     case 2 -> testeDFSeBFS();
                     case 3 -> testeConectividade();
                     case 4 -> testePontesNaive();
-                    case 5 -> testeGeracao();
-                    case 6 -> {
+                    case 5 -> testePontesTarjan();
+					case 6 -> testeGeracao();
+                    case 7 -> {
                         testeEstrutura();
                         testeDFSeBFS();
                         testeConectividade();
                         testePontesNaive();
                         testeGeracao();
                     }
-                    case 7 -> { /* voltar ao menu de tamanho */ }
+                    case 8 -> { /* voltar ao menu de tamanho */ }
                     case 0 -> System.out.println("Encerrando...");
                     default -> System.out.println("Opcao invalida.\n");
                 }
@@ -213,9 +214,10 @@ public class Main {
         System.out.println("║  2. DFS e BFS                        ║");
         System.out.println("║  3. Verificacao de conectividade     ║");
         System.out.println("║  4. Pontes - Metodo Naive            ║");
-        System.out.println("║  5. Geracao de grafos (3 tipos)      ║");
-        System.out.println("║  6. Todos os testes                  ║");
-        System.out.println("║  7. Voltar (trocar tamanho)          ║");
+		System.out.println("║  5. Pontes - Metodo Tarjan           ║");
+		System.out.println("║  6. Geracao de grafos (3 tipos)      ║");
+        System.out.println("║  7. Todos os testes                  ║");
+        System.out.println("║  8. Voltar (trocar tamanho)          ║");
         System.out.println("║  0. Sair                             ║");
         System.out.println("╚══════════════════════════════════════╝");
         System.out.print("Opcao: ");
@@ -356,6 +358,27 @@ public class Main {
 
         System.out.println();
     }
+
+	// --------------------------------------------------------
+	// 5. Pontes - Método Tarjan
+	// --------------------------------------------------------
+
+	static void testePontesTarjan() {
+    	System.out.println("=== 5. Pontes - Metodo Tarjan (n=" + N + ") ===");
+
+    	TarjanBridgeFinder tarjan = new TarjanBridgeFinder();
+
+    	Graph g = copiar(grafoAtual);
+
+    	long t0 = System.nanoTime();
+    	List<int[]> pontes = tarjan.findBridges(g);
+    	long tempo = System.nanoTime() - t0;
+
+    	System.out.println("  Pontes encontradas: " + pontes.size());
+    	System.out.printf("  Tempo Tarjan (n=%d): %.3f ms%n", N, tempo / 1_000_000.0);
+
+    	System.out.println();
+	}
 
     // -------------------------------------------------------
     // 5. Geração de grafos (3 tipos eulerianos)
